@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="form-card">
+    <p class="eyebrow">COURSE MANAGEMENT</p>
+    <h1>{{ page_title }}</h1>
+    <p class="muted">Enter the course information below.</p>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.course_code.label }}
+            {{ form.course_code(
+                placeholder="e.g. CSC301",
+                autocomplete="off"
+            ) }}
+            {% for error in form.course_code.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(
+                placeholder="e.g. Software Engineering"
+            ) }}
+            {% for error in form.title.errors %}
+                <small class="field-error">{{ error }}</small>
+            {% endfor %}
+        </div>
+
+        {% if form.lecturer_id %}
+            <div class="form-group">
+                {{ form.lecturer_id.label }}
+                {{ form.lecturer_id() }}
+                {% for error in form.lecturer_id.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {{ form.submit(class="primary-button") }}
+    </form>
+
+    <p class="back-link">
+        <a href="{{ back_url or url_for('courses.lecturer_courses') }}">
+            Cancel and return to courses
+        </a>
+    </p>
+</section>
+{% endblock %}

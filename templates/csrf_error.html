@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Please Try Again | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="panel attend-card">
+    <div class="status-icon info">↻</div>
+    <h1>Please try again</h1>
+    <p class="muted">
+        This form has expired, usually because the page was left open for a
+        long time or you signed in somewhere else. Nothing was changed.
+    </p>
+    <p class="muted">Go back, refresh the page, and submit the form again.</p>
+    <p class="back-link">
+        <a class="text-link" href="{{ url_for('home') }}">Go to the start page</a>
+    </p>
+</section>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied{% endblock %}
+
+{% block content %}
+<section class="panel attend-card">
+    <div class="status-icon error">!</div>
+    <h1>Access denied</h1>
+    <p class="muted">Your account does not have permission to access this page.</p>
+    <p class="back-link">
+        <a class="text-link" href="{{ url_for('dashboard') }}">Return to your dashboard</a>
+    </p>
+</section>
+{% endblock %}

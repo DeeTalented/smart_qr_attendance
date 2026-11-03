@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}{{ page_title }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading with-actions">
+    <div>
+        <p class="eyebrow">Course management</p>
+        <h1>{{ page_title }}</h1>
+        <p class="muted">
+            {% if is_admin %}
+                Review courses, assign lecturers and open attendance registers.
+            {% else %}
+                Manage your courses, enrolments and attendance sessions.
+            {% endif %}
+        </p>
+    </div>
+    <a class="primary-link"
+       href="{{ url_for('courses.admin_create_course' if is_admin else 'courses.create_course') }}">
+        {{ icon("plus") }} Create course
+    </a>
+</section>
+
+<section class="panel">
+    {% if courses %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Course title</th>
+                        {% if is_admin %}<th>Lecturer</th>{% endif %}
+                        <th>Students</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                        <tr>
+                            <td><span class="course-code">{{ course.course_code }}</span></td>
+                            <td>
+                                {% if is_admin %}
+                                    {{ course.title }}
+                                {% else %}
+                                    <a href="{{ url_for('courses.course_detail', course_id=course.id) }}">{{ course.title }}</a>
+                                {% endif %}
+                            </td>
+                            {% if is_admin %}<td>{{ course.lecturer.full_name }}</td>{% endif %}
+                            <td>{{ course.enrollments|length }}</td>
+                            <td class="cell-actions">
+                                <a href="{{ url_for('reports.course_register', course_id=course.id) }}">Register</a>
+                                {% if not is_admin %}
+                                    <a href="{{ url_for('courses.course_detail', course_id=course.id) }}">View</a>
+                                    <a href="{{ url_for('courses.edit_course', course_id=course.id) }}">Edit</a>
+                                    <form class="inline-form"
+                                          method="POST"
+                                          action="{{ url_for('courses.delete_course', course_id=course.id) }}"
+                                          onsubmit="return confirm('Delete this course?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="danger-link" type="submit">Delete</button>
+                                    </form>
+                                {% else %}
+                                    <a href="{{ url_for('courses.admin_edit_course', course_id=course.id) }}">Edit / reassign</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">No courses have been created yet.</div>
+    {% endif %}
+</section>
+
+<p class="back-link">
+    <a href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+</p>
+{% endblock %}

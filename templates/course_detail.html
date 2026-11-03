@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}{{ course.course_code }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading with-actions">
+    <div>
+        <p class="eyebrow">{{ course.course_code }}</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">Lecturer: {{ course.lecturer.full_name }} · {{ course.enrollments|length }} students enrolled</p>
+    </div>
+    <div class="heading-actions">
+        <a class="secondary-button" href="{{ url_for('courses.edit_course', course_id=course.id) }}">Edit course</a>
+        <a class="primary-link" href="{{ url_for('reports.course_register', course_id=course.id) }}">
+            {{ icon("chart") }} View attendance register
+        </a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Attendance sessions</h2>
+    </div>
+
+    {% if open_session %}
+        <div class="live-banner">
+            <span class="badge badge-open">Open</span>
+            <span>A session is open now and accepting scans.</span>
+            <a class="primary-link" href="{{ url_for('attendance.session_detail', session_id=open_session.id) }}">
+                {{ icon("qr") }} Show QR code
+            </a>
+        </div>
+    {% elif course.enrollments %}
+        <form class="inline-fields" method="POST"
+              action="{{ url_for('attendance.start_session', course_id=course.id) }}">
+            {{ start_form.hidden_tag() }}
+            <div class="form-group">
+                {{ start_form.duration_minutes.label }}
+                {{ start_form.duration_minutes() }}
+            </div>
+            {{ start_form.submit(class="primary-button") }}
+        </form>
+    {% else %}
+        <div class="empty-state">Enrol students before starting an attendance session.</div>
+    {% endif %}
+
+    {% if sessions %}
+        <div class="table-wrap section-gap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date (WAT)</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Present</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                        <tr>
+                            <td>{{ s.started_at|local_time("%d %b %Y") }}</td>
+                            <td>{{ s.started_at|local_time("%H:%M") }}–{{ s.expires_at|local_time("%H:%M") }}</td>
+                            <td><span class="badge badge-{{ s.status }}">{{ s.status|capitalize }}</span></td>
+                            <td>{{ session_counts[s.id][0] }} / {{ session_counts[s.id][1] }}</td>
+                            <td class="cell-actions">
+                                <a href="{{ url_for('attendance.session_detail', session_id=s.id) }}">View</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</section>
+
+<div class="two-column section-gap">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Enrol a student</h2>
+        </div>
+
+        {% if available_students %}
+            <form method="POST"
+                  action="{{ url_for('courses.enrol_student', course_id=course.id) }}">
+                {{ form.hidden_tag() }}
+
+                <div class="form-group">
+                    {{ form.student_id.label }}
+                    {{ form.student_id() }}
+                    {% for error in form.student_id.errors %}
+                        <small class="field-error">{{ error }}</small>
+                    {% endfor %}
+                </div>
+
+                {{ form.submit(class="primary-button") }}
+            </form>
+        {% else %}
+            <div class="empty-state">
+                All existing student accounts are already enrolled, or no student
+                accounts are available.
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Enrolled students ({{ course.enrollments|length }})</h2>
+        </div>
+
+        {% if course.enrollments %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Number</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for enrollment in course.enrollments|sort(attribute="student.full_name") %}
+                            <tr>
+                                <td>
+                                    {{ enrollment.student.full_name }}
+                                    <span class="cell-sub">{{ enrollment.student.email }}</span>
+                                </td>
+                                <td>{{ enrollment.student.student_number or "—" }}</td>
+                                <td class="cell-actions">
+                                    <form method="POST"
+                                          action="{{ url_for('courses.unenrol_student', course_id=course.id, student_id=enrollment.student_id) }}"
+                                          onsubmit="return confirm('Remove this student from the course?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="danger-link" type="submit">Unenrol</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">No students have enrolled in this course yet.</div>
+        {% endif %}
+    </section>
+</div>
+
+<p class="back-link">
+    <a href="{{ url_for('courses.lecturer_courses') }}">← Back to my courses</a>
+</p>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% set course = register.course %}
+{% set marks = {"present": "✓", "absent": "✗", "n/a": "—"} %}
+
+{% block title %}Register — {{ course.course_code }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading with-actions">
+    <div>
+        <p class="eyebrow">Attendance register · {{ course.course_code }}</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">Lecturer: {{ course.lecturer.full_name }}</p>
+    </div>
+    <a class="primary-link"
+       href="{{ url_for('reports.course_register_csv', course_id=course.id, start=register.start, end=register.end) }}">
+        {{ icon("download") }} Download CSV
+    </a>
+</section>
+
+{% for error in errors %}
+    <div class="message error">{{ error }}</div>
+{% endfor %}
+
+<form method="GET" class="filter-bar">
+    <label for="start">From</label>
+    <input type="date" id="start" name="start" value="{{ register.start or '' }}">
+    <label for="end">To</label>
+    <input type="date" id="end" name="end" value="{{ register.end or '' }}">
+    <button type="submit" class="secondary-button">Apply filter</button>
+    {% if register.start or register.end %}
+        <a href="{{ url_for('reports.course_register', course_id=course.id) }}">Clear</a>
+    {% endif %}
+</form>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Sessions counted</span>
+        <span class="stat-value">{{ register.sessions|length }}</span>
+        {% if register.open_sessions_excluded %}
+            <span class="stat-sub">+{{ register.open_sessions_excluded }} still open</span>
+        {% endif %}
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Students</span>
+        <span class="stat-value">{{ register.rows|length }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Average attendance</span>
+        <span class="stat-value">
+            {{ "%.1f%%"|format(register.average_percentage) if register.average_percentage is not none else "—" }}
+        </span>
+        <span class="stat-sub">Minimum: {{ threshold }}%</span>
+    </div>
+</section>
+
+{% if register.open_sessions_excluded %}
+    <div class="notice" style="margin: 0 0 18px;">
+        {{ register.open_sessions_excluded }} session(s) still open are not counted until they end.
+    </div>
+{% endif %}
+
+<section class="panel">
+    {% if register.rows %}
+        <div class="table-wrap">
+            <table class="register-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Number</th>
+                        {% for s in register.sessions %}
+                            <th class="mark" title="{{ s.started_at|local_time }} WAT">
+                                {{ s.started_at|local_time("%d %b") }}<br>{{ s.started_at|local_time("%H:%M") }}
+                            </th>
+                        {% endfor %}
+                        <th>Attended</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in register.rows %}
+                        {% set low = row.percentage is not none and row.percentage < threshold %}
+                        <tr {% if low %}class="low-attendance"{% endif %}>
+                            <td>{{ row.student.full_name }}</td>
+                            <td>{{ row.student.student_number or "—" }}</td>
+                            {% for mark in row.marks %}
+                                <td class="mark mark-{{ mark|replace('/', '') }}" title="{{ mark }}">{{ marks[mark] }}</td>
+                            {% endfor %}
+                            <td>{{ row.attended }} / {{ row.eligible }}</td>
+                            <td>
+                                <strong class="{% if low %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(row.percentage) if row.percentage is not none else "—" }}
+                                </strong>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="small-note legend">
+            <span><span class="mark-present">✓</span> present</span>
+            <span><span class="mark-absent">✗</span> absent</span>
+            <span><span class="mark-na">—</span> held before the student enrolled (not counted)</span>
+            <span>Highlighted rows are below {{ threshold }}%</span>
+            <span>Times are West Africa Time</span>
+        </p>
+    {% else %}
+        <div class="empty-state">No students are enrolled in this course.</div>
+    {% endif %}
+</section>
+
+<p class="back-link">
+    {% if current_user.role == "admin" %}
+        <a href="{{ url_for('courses.admin_courses') }}">← Back to all courses</a>
+    {% else %}
+        <a href="{{ url_for('courses.course_detail', course_id=course.id) }}">← Back to {{ course.course_code }}</a>
+    {% endif %}
+</p>
+{% endblock %}

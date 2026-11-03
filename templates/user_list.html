@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Users | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading with-actions">
+    <div>
+        <p class="eyebrow">User management</p>
+        <h1>Users</h1>
+        <p class="muted">Create accounts, update details, and reset passwords.</p>
+    </div>
+    <a class="primary-link" href="{{ url_for('admin.create_user') }}">
+        {{ icon("plus") }} Create user
+    </a>
+</section>
+
+<form method="GET" class="filter-bar">
+    <label for="role">Show</label>
+    <select id="role" name="role" onchange="this.form.submit()">
+        <option value="" {% if not selected_role %}selected{% endif %}>All roles</option>
+        {% for value, label in role_choices %}
+            <option value="{{ value }}" {% if selected_role == value %}selected{% endif %}>
+                {{ label }}
+            </option>
+        {% endfor %}
+    </select>
+    <noscript><button type="submit" class="secondary-button">Filter</button></noscript>
+    <span class="muted">{{ users|length }} account(s)</span>
+</form>
+
+<section class="panel">
+    {% if users %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Student number</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>
+                                <span class="user-cell">
+                                    <span class="avatar">{{ user.full_name.split()[:2]|map("first")|join|upper }}</span>
+                                    <span>
+                                        {{ user.full_name }}
+                                        <span class="cell-sub">{{ user.email }}</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td><span class="role-pill role-{{ user.role }}">{{ user.role|capitalize }}</span></td>
+                            <td>{{ user.student_number or "—" }}</td>
+                            <td class="cell-actions">
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+                                <a href="{{ url_for('admin.reset_password', user_id=user.id) }}">Reset password</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">No users match this filter.</div>
+    {% endif %}
+</section>
+
+<p class="back-link">
+    <a href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+</p>
+{% endblock %}

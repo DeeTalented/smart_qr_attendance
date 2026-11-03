@@ -1,0 +1,52 @@
+
+{% extends "base.html" %}
+
+{% macro field(f, hint=None) %}
+    <div class="form-group">
+        {{ f.label }}
+        {{ f(**kwargs) }}
+        {% if hint %}<small class="hint">{{ hint }}</small>{% endif %}
+        {% for error in f.errors %}
+            <small class="field-error">{{ error }}</small>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{% block title %}{{ page_title }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="form-card">
+    <p class="eyebrow">USER MANAGEMENT</p>
+    <h1>{{ page_title }}</h1>
+
+    {% if user %}
+        <p class="muted">Role: {{ user.role|capitalize }} (roles cannot be changed after creation).</p>
+    {% endif %}
+
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        {{ field(form.full_name, autocomplete="off") }}
+        {{ field(form.email, autocomplete="off") }}
+
+        {% if form.role %}
+            {{ field(form.role) }}
+        {% endif %}
+
+        {% if not user or user.role == "student" %}
+            {{ field(form.student_number, "Required for students; ignored for staff accounts.") }}
+        {% endif %}
+
+        {% if form.password %}
+            {{ field(form.password, "At least 8 characters. Share it with the user privately.", autocomplete="new-password") }}
+            {{ field(form.confirm_password, autocomplete="new-password") }}
+        {% endif %}
+
+        {{ form.submit(class="primary-button") }}
+    </form>
+
+    <p class="back-link">
+        <a href="{{ url_for('admin.user_list') }}">Cancel and return to users</a>
+    </p>
+</section>
+{% endblock %}

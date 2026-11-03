@@ -1,0 +1,17 @@
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Databases, keys and credentials: never commit these
+instance/
+deploy/
+*.db
+*.db-wal
+*.db-shm
+.env
+
+# Local backups and editor/tool settings
+backups/
+.claude/

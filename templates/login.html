@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Sign In | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+    <section class="auth-hero">
+        <span class="brand-mark">{{ icon("qr") }}</span>
+        <h2>Attendance in seconds, not roll calls.</h2>
+        <p>Lecturers display a QR code; students scan it with their phones. Every check-in is verified on the server.</p>
+        <ul class="feature-list">
+            <li>Time-limited QR codes that can be regenerated at any moment</li>
+            <li>Only enrolled students can sign in, and only once per session</li>
+            <li>Live registers, attendance percentages and CSV reports</li>
+        </ul>
+    </section>
+
+    <section class="login-card">
+        <p class="eyebrow">Attendance management</p>
+        <h1>Welcome back</h1>
+        <p class="muted">Sign in with your registered account.</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(placeholder="you@example.com", autocomplete="email") }}
+                {% for error in form.email.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                {{ form.password(placeholder="Enter your password", autocomplete="current-password") }}
+                {% for error in form.password.errors %}
+                    <small class="field-error">{{ error }}</small>
+                {% endfor %}
+            </div>
+
+            {{ form.submit(class="primary-button") }}
+        </form>
+
+        <p class="small-note">
+            Contact your system administrator if you need an account.
+        </p>
+    </section>
+</div>
+{% endblock %}

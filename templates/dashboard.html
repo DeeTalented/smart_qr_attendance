@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}{{ page_title }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">{{ current_user.role }} portal</p>
+    <h1>{{ page_title }}</h1>
+    <p class="muted">Welcome, {{ current_user.full_name.split()[0] }}. {{ description }}</p>
+</section>
+
+{% if stats %}
+    <section class="stats-grid" aria-label="Summary">
+        {% for stat in stats %}
+            <div class="stat-card">
+                <span class="stat-label">{{ stat.label }}</span>
+                <span class="stat-value">{{ stat.value }}</span>
+                {% if stat.sub %}<span class="stat-sub">{{ stat.sub }}</span>{% endif %}
+            </div>
+        {% endfor %}
+    </section>
+{% endif %}
+
+{% if courses is defined %}
+    <section class="panel">
+        <div class="panel-header">
+            <h2>{{ courses_heading }}</h2>
+        </div>
+
+        {% if courses %}
+            <div class="card-grid">
+                {% for course in courses %}
+                    <a class="course-card" href="{{ course.url }}">
+                        <span class="course-code">
+                            {{ course.code }}
+                            {% if course.live %}<span class="badge badge-open">Session open</span>{% endif %}
+                            {% if course.low %}<span class="badge badge-low">Below minimum</span>{% endif %}
+                        </span>
+                        <h3>{{ course.title }}</h3>
+
+                        {% if course.percent is defined %}
+                            <p>
+                                <strong class="{% if course.low %}text-danger{% endif %}">
+                                    {{ "%.1f%%"|format(course.percent) if course.percent is not none else "No sessions yet" }}
+                                </strong>
+                            </p>
+                            <div class="progress {% if course.low %}low{% endif %}">
+                                <span style="width: {{ course.percent or 0 }}%"></span>
+                            </div>
+                        {% endif %}
+
+                        <div class="course-meta">
+                            {% for line in course.meta %}<span>{{ line }}</span>{% endfor %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                {% if current_user.role == "student" %}
+                    You are not enrolled in any courses yet.
+                {% else %}
+                    You have no courses yet. Create one to get started.
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endif %}
+
+{% if actions %}
+    <section class="section-gap">
+        <h2>Quick actions</h2>
+        <div class="card-grid">
+            {% for action in actions %}
+                <a class="action-card" href="{{ action.url }}">
+                    <span class="icon-tile">{{ icon(action.icon) }}</span>
+                    <h3>{{ action.title }}</h3>
+                    <p>{{ action.text }}</p>
+                </a>
+            {% endfor %}
+            <a class="action-card" href="{{ url_for('auth.change_password') }}">
+                <span class="icon-tile">{{ icon("key") }}</span>
+                <h3>Change my password</h3>
+                <p>Keep your account secure.</p>
+            </a>
+        </div>
+    </section>
+{% endif %}
+
+<div class="notice">
+    {% if current_user.role == "student" %}
+        To record attendance, scan the QR code your lecturer displays in class.
+    {% else %}
+        Open a course's register to see attendance percentages, filter by date, and download CSV reports.
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% block title %}Record Attendance | Smart QR Attendance{% endblock %}
+
+{% set icons = {
+    "confirm": ("info", "?"),
+    "recorded": ("success", "✓"),
+    "already": ("info", "✓"),
+} %}
+{% set tone, symbol = icons.get(outcome, ("error", "!")) %}
+
+{% block content %}
+<section class="panel attend-card">
+    <div class="status-icon {{ tone }}">
+        {% if outcome == "confirm" %}{{ icon("scan") }}{% else %}{{ symbol }}{% endif %}
+    </div>
+
+    <p class="eyebrow">Record attendance</p>
+
+    {% if attendance_session %}
+        <h1>{{ attendance_session.course.course_code }}</h1>
+        <p class="muted">{{ attendance_session.course.title }}</p>
+    {% else %}
+        <h1>Attendance</h1>
+    {% endif %}
+
+    {% if outcome == "confirm" %}
+        <p>Signed in as <strong>{{ current_user.full_name }}</strong>.</p>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="primary-button">Mark me present</button>
+        </form>
+        <p class="small-note">
+            Session closes at {{ attendance_session.expires_at|local_time("%H:%M") }} WAT.
+        </p>
+
+    {% elif outcome == "recorded" %}
+        <div class="message success">
+            Your attendance has been recorded. You can close this page.
+        </div>
+
+    {% elif outcome == "already" %}
+        <div class="message info">Your attendance for this session is already recorded.</div>
+
+    {% elif outcome == "not_enrolled" %}
+        <div class="message error">
+            You are not enrolled in this course, so attendance cannot be recorded.
+            Speak to the course lecturer if you think this is a mistake.
+        </div>
+
+    {% elif outcome == "closed" %}
+        <div class="message error">The lecturer has closed this attendance session.</div>
+
+    {% elif outcome == "expired" %}
+        <div class="message error">This attendance session has expired.</div>
+
+    {% else %}
+        <div class="message error">
+            This QR code is not valid. It may have been replaced by a newer code —
+            scan the code currently displayed in class.
+        </div>
+    {% endif %}
+
+    <p class="back-link">
+        <a href="{{ url_for('dashboard') }}">Go to my dashboard</a>
+    </p>
+</section>
+{% endblock %}

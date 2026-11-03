@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+
+{% set course = attendance_session.course %}
+
+{% block title %}Attendance — {{ course.course_code }} | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading with-actions">
+    <div>
+        <p class="eyebrow">Attendance session · {{ course.course_code }}</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">
+            Started {{ attendance_session.started_at|local_time }} WAT ·
+            {% if attendance_session.status == "open" %}
+                closes {{ attendance_session.expires_at|local_time("%H:%M") }} WAT
+            {% else %}
+                ended {{ attendance_session.expires_at|local_time("%H:%M") }} WAT
+            {% endif %}
+        </p>
+    </div>
+    <a class="secondary-button" href="{{ url_for('reports.course_register', course_id=course.id) }}">
+        {{ icon("chart") }} Register
+    </a>
+</section>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Status</span>
+        <span class="stat-value">
+            <span id="status" class="badge badge-{{ attendance_session.status }}">
+                {{ attendance_session.status|capitalize }}
+            </span>
+        </span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Present</span>
+        <span class="stat-value"><span id="present">{{ records|length }}</span> / {{ enrolled_count }}</span>
+        <span class="stat-sub">students enrolled</span>
+    </div>
+    {% if attendance_session.status == "open" %}
+        <div class="stat-card">
+            <span class="stat-label">Time left</span>
+            <span class="stat-value countdown" id="countdown" data-seconds="{{ seconds_left }}">—</span>
+            <span class="stat-sub">until the code stops working</span>
+        </div>
+    {% endif %}
+</section>
+
+{% if attendance_session.status == "open" %}
+    <section class="panel">
+        {% if qr_image %}
+            <div class="qr-stage">
+                <div class="qr-box">
+                    <img src="{{ qr_image }}" alt="QR code for this attendance session" width="340" height="340">
+                </div>
+            </div>
+            <p class="muted qr-help">
+                Students scan this code with their phone camera and sign in to confirm.
+            </p>
+            {% if config.DEBUG %}
+                {# Development aid only: lets you test scanning without a phone.
+                   Never shown in production, where sharing the link as text
+                   would make proxy attendance easier. #}
+                <p class="small-note qr-help">
+                    Debug mode — scan link: <a id="scan-link" href="{{ qr_link }}">{{ qr_link }}</a>
+                </p>
+            {% endif %}
+            {% if "localhost" in qr_link or "127.0.0.1" in qr_link %}
+                <div class="message error section-gap">
+                    <span>
+                        This QR code points to <strong>localhost</strong>, which students' phones
+                        cannot reach. Open this page using the computer's network address
+                        (for example http://192.168.0.10:5000) or set PUBLIC_BASE_URL.
+                    </span>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="notice" style="margin-top: 0;">
+                The QR code can only be shown in the browser that created it or last
+                regenerated it. Issue a new code to display it here — any old code
+                will stop working.
+            </div>
+        {% endif %}
+
+        <div class="button-row">
+            <form method="POST" action="{{ url_for('attendance.regenerate_token', session_id=attendance_session.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="secondary-button">
+                    {{ "Regenerate QR code" if qr_image else "Issue new QR code" }}
+                </button>
+            </form>
+            <form method="POST"
+                  action="{{ url_for('attendance.close_session', session_id=attendance_session.id) }}"
+                  onsubmit="return confirm('Close this session? Students will no longer be able to sign in.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="danger-button">Close session</button>
+            </form>
+        </div>
+    </section>
+{% endif %}
+
+<section class="panel section-gap">
+    <div class="panel-header">
+        <h2>Students marked present ({{ records|length }})</h2>
+    </div>
+
+    {% if records %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Student number</th>
+                        <th>Time (WAT)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                        <tr>
+                            <td>{{ record.student.full_name }}</td>
+                            <td>{{ record.student.student_number or "—" }}</td>
+                            <td>{{ record.marked_at|local_time("%H:%M:%S") }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">No students have signed in yet.</div>
+    {% endif %}
+</section>
+
+<p class="back-link">
+    <a href="{{ url_for('courses.course_detail', course_id=course.id) }}">← Back to {{ course.course_code }}</a>
+</p>
+
+{% if attendance_session.status == "open" %}
+<script>
+(function () {
+    var countdown = document.getElementById("countdown");
+    var present = document.getElementById("present");
+    var secondsLeft = parseInt(countdown.dataset.seconds, 10);
+    var statusUrl = "{{ url_for('attendance.session_status', session_id=attendance_session.id) }}";
+
+    function showTime() {
+        var m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
+        countdown.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    showTime();
+    setInterval(function () {
+        if (secondsLeft > 0) { secondsLeft -= 1; showTime(); }
+        if (secondsLeft === 0) { window.location.reload(); }
+    }, 1000);
+
+    // The server stays the authority: the count and status come from it.
+    setInterval(function () {
+        fetch(statusUrl, { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                present.textContent = data.present;
+                secondsLeft = data.seconds_left;
+                if (data.status !== "open") { window.location.reload(); }
+            })
+            .catch(function () {});
+    }, 5000);
+})();
+</script>
+{% endif %}
+{% endblock %}

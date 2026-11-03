@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+{% from "_icons.html" import icon %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>{% block title %}Smart QR Attendance{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {# A navigation link that is highlighted when the current page belongs to it. #}
+    {% macro nav_link(target, label, prefixes) -%}
+        {% set endpoint = request.endpoint or "" %}
+        {% set ns = namespace(active=false) %}
+        {% for prefix in prefixes %}
+            {% if endpoint.startswith(prefix) %}{% set ns.active = true %}{% endif %}
+        {% endfor %}
+        <a href="{{ url_for(target) }}" {% if ns.active %}class="active" aria-current="page"{% endif %}>{{ label }}</a>
+    {%- endmacro %}
+
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="brand" href="{{ url_for('home') }}">
+                <span class="brand-mark">{{ icon("qr") }}</span>
+                Smart QR Attendance
+            </a>
+
+            {% if current_user.is_authenticated %}
+                <nav class="main-nav" aria-label="Main">
+                    {{ nav_link("dashboard", "Dashboard", ["admin_dashboard", "lecturer_dashboard", "student_dashboard"]) }}
+                    {% if current_user.role == "admin" %}
+                        {{ nav_link("admin.user_list", "Users", ["admin."]) }}
+                        {{ nav_link("courses.admin_courses", "Courses", ["courses.admin", "reports.course_register"]) }}
+                    {% elif current_user.role == "lecturer" %}
+                        {{ nav_link("courses.lecturer_courses", "My courses", ["courses.", "attendance.", "reports.course_register"]) }}
+                    {% elif current_user.role == "student" %}
+                        {{ nav_link("reports.student_attendance", "My attendance", ["reports.student_attendance"]) }}
+                    {% endif %}
+                </nav>
+
+                <div class="user-menu">
+                    {% set initials = current_user.full_name.split()[:2]|map("first")|join|upper %}
+                    <a class="user-chip" href="{{ url_for('auth.change_password') }}" title="Account and password">
+                        <span class="avatar">{{ initials }}</span>
+                        <span class="user-name">
+                            {{ current_user.full_name }}
+                            <span class="role-tag">{{ current_user.role }}</span>
+                        </span>
+                    </a>
+                    <form method="POST" action="{{ url_for('auth.logout') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="logout-button">Sign out</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message {{ category }}" role="status">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        Smart QR Attendance System · Final-year project, Department of Computer Science
+    </footer>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}My Attendance | Smart QR Attendance{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">Student portal</p>
+    <h1>My Attendance</h1>
+    <p class="muted">Your attendance for each course you are enrolled in. The minimum required is {{ threshold }}%.</p>
+</section>
+
+{% for register, row, history in summaries %}
+    {% set low = row.percentage is not none and row.percentage < threshold %}
+    <section class="panel {% if not loop.first %}section-gap{% endif %}">
+        <div class="panel-header">
+            <div>
+                <span class="course-code">{{ register.course.course_code }}</span>
+                <h2>{{ register.course.title }}</h2>
+            </div>
+            {% if low %}<span class="badge badge-low">Below minimum</span>{% endif %}
+        </div>
+
+        <div class="session-stats">
+            <div>
+                <span class="stat-label">Attended</span>
+                <strong>{{ row.attended }} / {{ row.eligible }}</strong>
+            </div>
+            <div>
+                <span class="stat-label">Percentage</span>
+                <strong class="{% if low %}text-danger{% endif %}">
+                    {{ "%.1f%%"|format(row.percentage) if row.percentage is not none else "—" }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="progress {% if low %}low{% endif %}" role="presentation">
+            <span style="width: {{ row.percentage or 0 }}%"></span>
+        </div>
+
+        {% if low %}
+            <div class="message error section-gap">Your attendance is below {{ threshold }}%.</div>
+        {% endif %}
+
+        {% if register.open_sessions_excluded %}
+            <div class="notice">
+                A session for this course is in progress. It will appear here,
+                and count towards your percentage, once it ends.
+            </div>
+        {% endif %}
+
+        {% if register.sessions %}
+            <div class="table-wrap section-gap">
+                <table>
+                    <thead>
+                        <tr><th>Date (WAT)</th><th>Time</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s, mark in history %}
+                            <tr>
+                                <td>{{ s.started_at|local_time("%d %b %Y") }}</td>
+                                <td>{{ s.started_at|local_time("%H:%M") }}</td>
+                                <td class="mark-{{ mark|replace('/', '') }}">
+                                    {{ {"present": "Present", "absent": "Absent", "n/a": "Before enrolment"}[mark] }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state section-gap">No completed sessions yet.</div>
+        {% endif %}
+    </section>
+{% else %}
+    <div class="empty-state">You are not enrolled in any courses yet.</div>
+{% endfor %}
+
+<p class="back-link">
+    <a href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+</p>
+{% endblock %}
